@@ -1,6 +1,7 @@
 import java.nio.ByteBuffer
 import java.nio.file.{Paths, Path}
-import java.util.Base64
+import java.util.{Base64, Date}
+
 import scala.jdk.CollectionConverters._
 
 object FileObject {
@@ -41,3 +42,16 @@ case class FileObject(filePath: Path, lastModifiedTime: Long) {
   }
 }
 
+case class Snapshot(timestamp: Date, fileObjects: Set[FileObject]) {
+  def addFileObject(fileObject: FileObject): Snapshot = {
+    Snapshot(timestamp, fileObjects + fileObject)
+  }
+
+  def removeFileObject(fileObject: FileObject): Snapshot = {
+    Snapshot(timestamp, fileObjects - fileObject)
+  }
+
+  def replaceFileObject(oldFileObject: FileObject, newFileObject: FileObject): Snapshot = {
+    this.removeFileObject(oldFileObject).addFileObject(newFileObject)
+  }
+}
