@@ -112,6 +112,75 @@ class SnapshotFile(val snapshot: Snapshot) {
   }
 }
 
+class SnapshotRepo(path: Path) {
+  private val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS")
+  dateFormat.setTimeZone(TimeZone.getDefault)
+
+  private def parseDate(dateString: String): Date = {
+    dateFormat.parse(dateString, new ParsePosition(0))
+  }
+
+  private def dateToString(date: Date): String = {
+    dateFormat.format(date)
+  }
+
+  private def dateToFilename(date: Date): String = {
+    s"snapshot.${dateToString(date)}.txt"
+  }
+
+  private def content(snapshot: Snapshot): String = {
+    snapshot.fileObjects.map(_.serializeToPath()).mkString("\n")
+  }
+
+  private def getSnapshotFilePath(timestamp: Date): Path = {
+    path.resolve(dateToFilename(timestamp))
+  }
+
+  private def getSnapshotFilePath(snapshot: Snapshot): Path = {
+    getSnapshotFilePath(snapshot.timestamp)
+  }
+
+  def put(snapshot: Snapshot): Path = {
+    val snapshotFilePath = getSnapshotFilePath(snapshot)
+    val file = snapshotFilePath.toFile
+    val writer = new BufferedWriter(new FileWriter(file))
+    writer.write(content(snapshot))
+    writer.close()
+    path
+  }
+
+  def get(timestamp: Date): Option[Snapshot] = {
+    val snapshotFilePath = getSnapshotFilePath(timestamp)
+    if (snapshotFilePath.toFile.isFile) {
+      val fileSource = Source.fromFile(snapshotFilePath.toFile)
+      val fileObjects = fileSource.mkString.split('\n')
+        .map(_.trim).map(Path.of(_))
+        .map(FileObject.deserializeFromPath)
+      Some(Snapshot(timestamp, fileObjects.toSet))
+    } else {
+      None
+    }
+  }
+
+  def delete(snapshot: Snapshot): Unit = {
+    val snapshotFilePath = getSnapshotFilePath(snapshot)
+    val snapshotFile = snapshotFilePath.toFile
+    if (snapshotFile.isFile) {
+      snapshotFile.delete()
+    }
+  }
+
+  def listTimestamps(): Seq[Date] = {
+    path.toFile.listFiles
+      .filter(_.isFile)
+      .map(_.getName)
+      .filter("snapshot\\.\\d{17}\\.txt".r.matches(_))
+      .map(_.split('.')(1))
+      .map(parseDate)
+  }
+
+}
+
 class Repository(path: Path) {
   require(path.toFile.isDirectory, f"Repository $path must be a directory")
   val snapshotFolder: Path = path.resolve("snapshot")
