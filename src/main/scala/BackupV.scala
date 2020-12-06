@@ -136,4 +136,9 @@ class Repository(path: Path) {
       filePathInRepository,
       java.nio.file.StandardCopyOption.REPLACE_EXISTING)
   }
+
+  def save(snapshot: Snapshot): Unit = {
+    val snapshotFile = new SnapshotFile(snapshot)
+    snapshotFile.saveTo(snapshotFolder)
+  }
 }
