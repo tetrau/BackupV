@@ -162,4 +162,12 @@ class Repository(path: Path) {
     val filePathInRepo = filePathInRepository(fileObject)
     deleteHelper(filePathInRepo)
   }
+
+  def delete(snapshot: Snapshot): Unit = {
+    val snapshotFile = new SnapshotFile(snapshot)
+    val file = snapshotFolder.resolve(snapshotFile.filename).toFile
+    if (file.isFile) {
+      file.delete()
+    }
+  }
 }
