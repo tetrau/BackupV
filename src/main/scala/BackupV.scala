@@ -1,7 +1,10 @@
+import java.io.{BufferedWriter, FileWriter}
 import java.nio.ByteBuffer
-import java.nio.file.{Paths, Path}
-import java.util.{Base64, Date}
+import java.nio.file.{Path, Paths}
+import java.text.{ParsePosition, SimpleDateFormat}
+import java.util.{Base64, Date, TimeZone}
 
+import scala.io.Source
 import scala.jdk.CollectionConverters._
 
 object FileObject {
@@ -53,5 +56,54 @@ case class Snapshot(timestamp: Date, fileObjects: Set[FileObject]) {
 
   def replaceFileObject(oldFileObject: FileObject, newFileObject: FileObject): Snapshot = {
     this.removeFileObject(oldFileObject).addFileObject(newFileObject)
+  }
+}
+
+object SnapshotFile {
+  private val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS")
+  dateFormat.setTimeZone(TimeZone.getDefault)
+
+  private def parseDate(dateString: String): Date = {
+    dateFormat.parse(dateString, new ParsePosition(0))
+  }
+
+  def read(filename: String, content: String): Snapshot = {
+    val dateString = filename.split('.')(1)
+    val timestamp = parseDate(dateString)
+    val fileObjects = content.split('\n')
+      .map(_.trim).map(Path.of(_))
+      .map(FileObject.deserializeFromPath)
+    Snapshot(timestamp, fileObjects.toSet)
+  }
+
+  def read(path: Path): Snapshot = {
+    val filename = path.getFileName.toString
+    val fileSource = Source.fromFile(path.toFile)
+    val fileContent = fileSource.mkString
+    fileSource.close
+    read(filename, fileContent)
+  }
+}
+
+class SnapshotFile(val snapshot: Snapshot) {
+  private def dateToString(date: Date): String = {
+    SnapshotFile.dateFormat.format(date)
+  }
+
+  val filename: String = {
+    s"snapshot.${dateToString(snapshot.timestamp)}.txt"
+  }
+
+  lazy val content: String = {
+    snapshot.fileObjects.map(_.serializeToPath()).mkString("\n")
+  }
+
+  def saveTo(folder: Path): Path = {
+    val path = folder.resolve(filename)
+    val file = path.toFile
+    val writer = new BufferedWriter(new FileWriter(file))
+    writer.write(content)
+    writer.close()
+    path
   }
 }
