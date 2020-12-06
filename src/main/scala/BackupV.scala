@@ -1,6 +1,6 @@
 import java.io.{BufferedWriter, FileWriter}
 import java.nio.ByteBuffer
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.text.{ParsePosition, SimpleDateFormat}
 import java.util.{Base64, Date, TimeZone}
 
@@ -42,6 +42,10 @@ case class FileObject(filePath: Path, lastModifiedTime: Long) {
   def serializeToPath(): Path = {
     val serializedResult = serialize()
     Paths.get(serializedResult.take(2), serializedResult.drop(2).sliding(255, 255).toSeq: _*)
+  }
+
+  def serializeToPath(base: Path): Path = {
+    base.resolve(serializeToPath())
   }
 }
 
@@ -105,5 +109,31 @@ class SnapshotFile(val snapshot: Snapshot) {
     writer.write(content)
     writer.close()
     path
+  }
+}
+
+class Repository(path: Path) {
+  require(path.toFile.isDirectory, f"Repository $path must be a directory")
+  val snapshotFolder: Path = path.resolve("snapshot")
+  val blobFolder: Path = path.resolve("blob")
+
+  private def createFolder(p: Path): Unit = {
+    val file = p.toFile
+    require(!file.isFile, f"$p already exists as a file")
+    if (!file.exists()) {
+      file.mkdir()
+    }
+  }
+
+  createFolder(snapshotFolder)
+  createFolder(blobFolder)
+
+  def save(fileObjectBase: Path, fileObject: FileObject): Unit = {
+    val filePathInRepository = fileObject.serializeToPath(blobFolder)
+    filePathInRepository.getParent.toFile.mkdirs()
+    Files.copy(
+      fileObjectBase.resolve(fileObject.filePath),
+      filePathInRepository,
+      java.nio.file.StandardCopyOption.REPLACE_EXISTING)
   }
 }
