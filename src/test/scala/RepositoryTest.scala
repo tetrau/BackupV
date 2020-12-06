@@ -1,14 +1,13 @@
 import java.io.{BufferedWriter, FileWriter}
 import java.nio.file.Path
-
-import org.scalatest.FunSuite
-
 import scala.io.Source
 
-class RepositoryTest extends FunSuite {
+class RepositoryTest extends TestWithCleanUp {
   test("Repository.save") {
     val file = Path.of("/tmp/test")
+    addToCleanUp(file)
     val repositoryPath = Path.of("/tmp/testRepo")
+    addToCleanUp(repositoryPath)
     repositoryPath.toFile.mkdir()
     val writer = new BufferedWriter(new FileWriter(file.toFile))
     val content = "test1234"
