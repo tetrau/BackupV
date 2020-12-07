@@ -14,27 +14,9 @@ class RepositoryTest extends TestWithCleanUp {
     val (base, fileObject) = createFileObject("test", content)
     val repository = createRepo()
     repository.save(base, fileObject)
-    val blobSource = Source.fromFile(fileObject.serializeToPath(repository.blobFolder).toFile)
+    val blobSource = Source.fromFile(repository.get(fileObject).get.toFile)
     val blobContent = blobSource.mkString
     blobSource.close()
     assert(blobContent == content)
-  }
-
-  test("Repository.delete") {
-    val repo = createRepo()
-    val (base, fileObject1) = createFileObject("test1", "", 0)
-    val (_, fileObject2) = createFileObject("test2", "", 0)
-    val (_, fileObject3) = createFileObject("test3", "", 1)
-    repo.save(base, fileObject1)
-    repo.save(base, fileObject2)
-    repo.save(base, fileObject3)
-    def blobFolderSubFolderCount = repo.blobFolder.toFile.listFiles.length
-    assert(blobFolderSubFolderCount == 2)
-    repo.delete(fileObject1)
-    assert(blobFolderSubFolderCount == 2)
-    repo.delete(fileObject3)
-    assert(blobFolderSubFolderCount == 1)
-    repo.delete(fileObject2)
-    assert(blobFolderSubFolderCount == 0)
   }
 }

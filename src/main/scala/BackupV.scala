@@ -63,54 +63,6 @@ case class Snapshot(timestamp: Date, fileObjects: Set[FileObject]) {
   }
 }
 
-object SnapshotFile {
-  private val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS")
-  dateFormat.setTimeZone(TimeZone.getDefault)
-
-  private def parseDate(dateString: String): Date = {
-    dateFormat.parse(dateString, new ParsePosition(0))
-  }
-
-  def read(filename: String, content: String): Snapshot = {
-    val dateString = filename.split('.')(1)
-    val timestamp = parseDate(dateString)
-    val fileObjects = content.split('\n')
-      .map(_.trim).map(Path.of(_))
-      .map(FileObject.deserializeFromPath)
-    Snapshot(timestamp, fileObjects.toSet)
-  }
-
-  def read(path: Path): Snapshot = {
-    val filename = path.getFileName.toString
-    val fileSource = Source.fromFile(path.toFile)
-    val fileContent = fileSource.mkString
-    fileSource.close
-    read(filename, fileContent)
-  }
-}
-
-class SnapshotFile(val snapshot: Snapshot) {
-  private def dateToString(date: Date): String = {
-    SnapshotFile.dateFormat.format(date)
-  }
-
-  val filename: String = {
-    s"snapshot.${dateToString(snapshot.timestamp)}.txt"
-  }
-
-  lazy val content: String = {
-    snapshot.fileObjects.map(_.serializeToPath()).mkString("\n")
-  }
-
-  def saveTo(folder: Path): Path = {
-    val path = folder.resolve(filename)
-    val file = path.toFile
-    val writer = new BufferedWriter(new FileWriter(file))
-    writer.write(content)
-    writer.close()
-    path
-  }
-}
 
 class SnapshotRepo(path: Path) {
   private val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS")
@@ -224,8 +176,8 @@ class BlobRepo(path: Path) {
 
 class Repository(path: Path) {
   require(path.toFile.isDirectory, f"Repository $path must be a directory")
-  val snapshotFolder: Path = path.resolve("snapshot")
-  val blobFolder: Path = path.resolve("blob")
+  private val snapshotFolder: Path = path.resolve("snapshot")
+  private val blobFolder: Path = path.resolve("blob")
 
   private def createFolder(p: Path): Unit = {
     val file = p.toFile
@@ -237,47 +189,26 @@ class Repository(path: Path) {
 
   createFolder(snapshotFolder)
   createFolder(blobFolder)
-
-  def filePathInRepository(fileObject: FileObject): Path = {
-    fileObject.serializeToPath(blobFolder)
-  }
+  private val blobRepo = new BlobRepo(blobFolder)
+  private val snapshotRepo = new SnapshotRepo(snapshotFolder)
 
   def save(fileObjectBase: Path, fileObject: FileObject): Unit = {
-    val filePathInRepo = filePathInRepository(fileObject)
-    filePathInRepo.getParent.toFile.mkdirs()
-    Files.copy(
-      fileObjectBase.resolve(fileObject.filePath),
-      filePathInRepo,
-      java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    blobRepo.put(fileObjectBase, fileObject)
   }
 
   def save(snapshot: Snapshot): Unit = {
-    val snapshotFile = new SnapshotFile(snapshot)
-    snapshotFile.saveTo(snapshotFolder)
+    snapshotRepo.put(snapshot)
+  }
+
+  def get(fileObject: FileObject): Option[Path] = {
+    blobRepo.get(fileObject)
   }
 
   def delete(fileObject: FileObject): Unit = {
-    @scala.annotation.tailrec
-    def deleteHelper(path: Path): Unit = {
-      val file = path.toFile
-      if (path == blobFolder) {}
-      else if (file.isFile || (file.isDirectory && file.listFiles().length == 0)) {
-        file.delete()
-        deleteHelper(path.getParent)
-      } else if (!file.isFile && !file.isDirectory) {
-        throw new RuntimeException(s"Can not delete $fileObject from repository because $path not exists")
-      }
-    }
-
-    val filePathInRepo = filePathInRepository(fileObject)
-    deleteHelper(filePathInRepo)
+    blobRepo.delete(fileObject)
   }
 
   def delete(snapshot: Snapshot): Unit = {
-    val snapshotFile = new SnapshotFile(snapshot)
-    val file = snapshotFolder.resolve(snapshotFile.filename).toFile
-    if (file.isFile) {
-      file.delete()
-    }
+    snapshotRepo.delete(snapshot)
   }
 }
