@@ -178,6 +178,47 @@ class SnapshotRepo(path: Path) {
       .map(_.split('.')(1))
       .map(parseDate)
   }
+}
+
+class BlobRepo(path: Path) {
+  def filePathInRepository(fileObject: FileObject): Path = {
+    fileObject.serializeToPath(path)
+  }
+
+  def put(fileObjectBase: Path, fileObject: FileObject): Unit = {
+    val filePathInRepo = filePathInRepository(fileObject)
+    filePathInRepo.getParent.toFile.mkdirs()
+    Files.copy(
+      fileObjectBase.resolve(fileObject.filePath),
+      filePathInRepo,
+      java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+  }
+
+  def get(fileObject: FileObject): Option[Path] = {
+    val filePath = filePathInRepository(fileObject)
+    if (filePath.toFile.isFile) {
+      Some(filePath)
+    } else {
+      None
+    }
+  }
+
+  def delete(fileObject: FileObject): Unit = {
+    @scala.annotation.tailrec
+    def deleteHelper(deletePath: Path): Unit = {
+      val file = deletePath.toFile
+      if (deletePath == path) {}
+      else if (file.isFile || (file.isDirectory && file.listFiles().length == 0)) {
+        file.delete()
+        deleteHelper(deletePath.getParent)
+      } else if (!file.isFile && !file.isDirectory) {
+        throw new RuntimeException(s"Can not delete $fileObject from repository because $deletePath not exists")
+      }
+    }
+
+    val filePathInRepo = filePathInRepository(fileObject)
+    deleteHelper(filePathInRepo)
+  }
 
 }
 

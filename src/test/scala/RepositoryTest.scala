@@ -1,4 +1,3 @@
-import java.io.{BufferedWriter, FileWriter}
 import java.nio.file.Path
 import scala.io.Source
 
@@ -8,24 +7,6 @@ class RepositoryTest extends TestWithCleanUp {
     addToCleanUp(repositoryPath)
     repositoryPath.toFile.mkdir()
     new Repository(repositoryPath)
-  }
-
-  def createFile(filename: String, content: String): (Path, Path) = {
-    val file = Path.of(s"/tmp/$filename")
-    addToCleanUp(file)
-    val writer = new BufferedWriter(new FileWriter(file.toFile))
-    writer.write(content)
-    writer.close()
-    (file.getParent, file.getFileName)
-  }
-
-  def createFileObject(filename: String, content: String, lastModifiedTime: Long): (Path, FileObject) = {
-    val (base, filePath) = createFile(filename, content)
-    (base, FileObject(filePath, lastModifiedTime))
-  }
-
-  def createFileObject(filename: String, content: String): (Path, FileObject) = {
-    createFileObject(filename, content, System.currentTimeMillis())
   }
 
   test("Repository.save") {
