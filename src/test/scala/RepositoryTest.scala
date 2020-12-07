@@ -13,7 +13,7 @@ class RepositoryTest extends TestWithCleanUp {
     val content = "1234567890"
     val (base, fileObject) = createFileObject("test", content)
     val repository = createRepo()
-    repository.save(base, fileObject)
+    repository.put(base, fileObject)
     val blobSource = Source.fromFile(repository.get(fileObject).get.toFile)
     val blobContent = blobSource.mkString
     blobSource.close()

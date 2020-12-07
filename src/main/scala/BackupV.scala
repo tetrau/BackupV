@@ -192,16 +192,20 @@ class Repository(path: Path) {
   private val blobRepo = new BlobRepo(blobFolder)
   private val snapshotRepo = new SnapshotRepo(snapshotFolder)
 
-  def save(fileObjectBase: Path, fileObject: FileObject): Unit = {
+  def put(fileObjectBase: Path, fileObject: FileObject): Unit = {
     blobRepo.put(fileObjectBase, fileObject)
   }
 
-  def save(snapshot: Snapshot): Unit = {
+  def put(snapshot: Snapshot): Unit = {
     snapshotRepo.put(snapshot)
   }
 
   def get(fileObject: FileObject): Option[Path] = {
     blobRepo.get(fileObject)
+  }
+
+  def get(snapshotTimestamp: Date): Option[Snapshot] = {
+    snapshotRepo.get(snapshotTimestamp)
   }
 
   def delete(fileObject: FileObject): Unit = {
@@ -210,5 +214,9 @@ class Repository(path: Path) {
 
   def delete(snapshot: Snapshot): Unit = {
     snapshotRepo.delete(snapshot)
+  }
+
+  def listSnapshotTimestamps(): Seq[Date] = {
+    snapshotRepo.listTimestamps()
   }
 }
