@@ -1,7 +1,9 @@
-import java.io.{BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.ByteBuffer
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.text.{ParsePosition, SimpleDateFormat}
+import java.util.function.BiPredicate
 import java.util.{Base64, Date, TimeZone}
 
 import scala.io.Source
@@ -123,7 +125,7 @@ class SnapshotRepo(path: Path) {
   }
 
   def listTimestamps(): Seq[Date] = {
-    path.toFile.listFiles
+    path.toFile.listFiles.toSeq
       .filter(_.isFile)
       .map(_.getName)
       .filter("snapshot\\.\\d{17}\\.txt".r.matches(_))
@@ -218,5 +220,11 @@ class Repository(path: Path) {
 
   def listSnapshotTimestamps(): Seq[Date] = {
     snapshotRepo.listTimestamps()
+  }
+}
+
+object DirectoryScan {
+  def scan(start: Path): IterableOnce[Path] = {
+    Files.find(start, Integer.MAX_VALUE, (_, fileAttr) => fileAttr.isRegularFile).iterator().asScala
   }
 }
