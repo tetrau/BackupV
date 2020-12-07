@@ -7,13 +7,18 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 class TestWithCleanUp extends FunSuite with BeforeAndAfter {
   private var toCleanUp = List[Either[Path, File]]()
 
-  protected def createTempFile(filename: String, content: String): Path = {
-    val file = Path.of(s"/tmp/$filename")
+  protected def createTempFile(relPath: Path, content: String): Path = {
+    val file = Path.of(s"/tmp/").resolve(relPath)
+    file.getParent.toFile.mkdirs()
     addToCleanUp(file)
     val writer = new BufferedWriter(new FileWriter(file.toFile))
     writer.write(content)
     writer.close()
     file
+  }
+
+  protected def createTempFile(filename: String, content: String): Path = {
+    createTempFile(Path.of(filename), content)
   }
 
   protected def createFileObject(filename: String, content: String, lastModifiedTime: Long): (Path, FileObject) = {
