@@ -1,9 +1,7 @@
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, FileWriter}
 import java.nio.ByteBuffer
-import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.{Files, Path, Paths}
 import java.text.{ParsePosition, SimpleDateFormat}
-import java.util.function.BiPredicate
 import java.util.{Base64, Date, TimeZone}
 
 import scala.io.Source
